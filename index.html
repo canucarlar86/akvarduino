@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akvardinio - Akıllı Akvaryum Yönetimi</title>
+    <meta name="description" content="Akvardinio ile akvaryumunuzun ısı, nem, ışık ve TDS değerlerini gerçek zamanlı olarak izleyin ve yönetin.">
+    
+    <!-- Local Fonts -->
+    <link href="fonts/outfit-google.css" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="lib/phosphor-icons-web.js"></script>
+
+    <!-- Chart.js -->
+    <script src="lib/chart.umd.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css?v=1.8">
+</head>
+<body class="auth-locked">
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-panel glass-panel">
+            <div class="login-brand">
+                <img src="logo.png" alt="Akvardinio Logo">
+                <h1>Akvardinio</h1>
+                <p>Kontrol paneline giriş yapın</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="input-group">
+                    <label>Kullanıcı Adı</label>
+                    <input type="text" id="login-username" class="setting-input" autocomplete="username" required>
+                </div>
+                <div class="input-group">
+                    <label>Şifre</label>
+                    <input type="password" id="login-password" class="setting-input" autocomplete="current-password" required>
+                </div>
+                <label class="remember-login">
+                    <input type="checkbox" id="login-remember">
+                    <span>Beni hatırla</span>
+                </label>
+                <p class="login-error" id="login-error"></p>
+                <button class="toggle-btn login-btn" type="submit">Giriş Yap</button>
+                <button class="toggle-btn setup-open-btn" id="btn-open-setup" type="button">Yeni Kurulum</button>
+            </form>
+            <div class="setup-panel" id="setupPanel" hidden>
+                <div class="setup-panel-header">
+                    <div>
+                        <h2>Yeni Kurulum</h2>
+                        <p>Akvaryum tipini sec, sensor degerlerini bu kullaniciya ozel ayarla.</p>
+                    </div>
+                    <button class="setup-close-btn" id="btn-close-setup" type="button"><i class="ph ph-x"></i></button>
+                </div>
+                <div class="setup-form">
+                    <div class="setup-account-grid">
+                        <div class="input-group">
+                            <label>Kullanici Adi</label>
+                            <input type="text" id="setup-username" class="setting-input" autocomplete="off">
+                        </div>
+                        <div class="input-group">
+                            <label>Sifre</label>
+                            <input type="password" id="setup-password" class="setting-input" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Akvaryum Tipi</label>
+                        <select id="setup-aquarium-type" class="setting-input">
+                            <option value="freshwater-fish">Tatli su balik akvaryumu</option>
+                            <option value="saltwater-fish">Tuzlu su balik akvaryumu</option>
+                            <option value="freshwater-plant">Tatli su bitki akvaryumu</option>
+                            <option value="saltwater-plant">Tuzlu su bitki akvaryumu</option>
+                            <option value="freshwater-mixed">Tatli su balik + bitki akvaryumu</option>
+                            <option value="saltwater-mixed">Tuzlu su balik + bitki akvaryumu</option>
+                        </select>
+                    </div>
+                    <div class="setup-sensor-grid" id="setup-sensor-grid"></div>
+                    <p class="login-error" id="setup-error"></p>
+                    <button class="toggle-btn login-btn" id="btn-complete-setup" type="button">Kurulumu Tamamla</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="logo">
+                <video class="sidebar-logo-video" src="Video/video.mp4" autoplay loop muted playsinline></video>
+            </div>
+            
+
+
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-view="dashboard-view">
+                    <i class="ph ph-squares-four"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-view="feeding-view">
+                    <i class="ph ph-fish-simple"></i>
+                    <span>Yemleme Programı</span>
+                </a>
+                <a href="#" class="nav-item" data-view="charts-view">
+                    <i class="ph ph-chart-bar"></i>
+                    <span>Sensör Grafikleri</span>
+                </a>
+                <a href="#" class="nav-item" data-view="history-data-view">
+                    <i class="ph ph-chart-line-up"></i>
+                    <span>Geçmiş Veriler</span>
+                </a>
+                <a href="#" class="nav-item" data-view="terminal-view">
+                    <i class="ph ph-terminal-window"></i>
+                    <span>ESP32 Terminal</span>
+                </a>
+                <a href="#" class="nav-item admin-only" data-view="users-view">
+                    <i class="ph ph-users"></i>
+                    <span>Kullanıcılar</span>
+                </a>
+                <a href="#" class="nav-item can-only" data-view="admin-panel-view">
+                    <i class="ph ph-shield-star"></i>
+                    <span>Yonetim Paneli</span>
+                </a>
+                <a href="#" class="nav-item" data-view="settings-view">
+                    <i class="ph ph-sliders-horizontal"></i>
+                    <span>Ayarlar</span>
+                </a>
+            </nav>
+            <div class="connection-status" id="btn-terminal" style="cursor: pointer; transition: all 0.3s ease;" title="Ham Veri Terminalini Aç" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.2)'">
+                <div class="connection-status-lines">
+                    <div class="connection-status-row">
+                        <div class="status-indicator online"></div>
+                        <span>ESP32 Bağlı</span>
+                    </div>
+                    <div class="connection-status-row usb-status-row" id="arduino-usb-status">
+                        <div class="status-indicator usb-waiting" id="arduinoUsbIndicator"></div>
+                        <span id="arduinoUsbLabel">Arduino USB kontrol ediliyor</span>
+                    </div>
+                </div>
+                <button class="usb-check-btn" id="btn-usb-check" type="button" title="Arduino USB portunu seç">
+                    <i class="ph ph-usb"></i>
+                </button>
+                <i class="ph ph-terminal-window terminal-status-icon"></i>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div>
+                    <h2>Akvaryum Durumu</h2>
+                    <p class="subtitle">Gerçek zamanlı sensör verileri</p>
+                </div>
+                <div class="header-right-group">
+                    <div class="datetime-display">
+                        <span class="time-display" id="currentTime">--:--:--</span>
+                        <span class="date-display" id="currentDate">--</span>
+                    </div>
+                    <div class="active-user-display">
+                        <div>
+                            <span>Aktif Kullanıcı</span>
+                            <strong id="active-user-label">--</strong>
+                        </div>
+                        <button id="btn-logout" class="sidebar-logout" type="button" title="Çıkış Yap">
+                            <i class="ph ph-sign-out"></i>
+                        </button>
+                    </div>
+                    <button class="theme-toggle-btn" id="btn-theme" title="Tema Değiştir">
+                        <i class="ph ph-sun"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Top Promo Banner -->
+            <div class="top-banner glass-panel">
+                <div class="banner-content">
+                    <span class="banner-badge">YENİ ÜRÜN</span>
+                    <div class="banner-text">
+                        <h3>Akıllı Dozaj Pompası V2 Stoklarda!</h3>
+                        <p>Akvaryum bitkileriniz için otomatik gübreleme sistemini inceleyin. İlk siparişe özel %15 indirim.</p>
+                    </div>
+                </div>
+                <button class="toggle-btn banner-btn">Hemen İncele</button>
+            </div>
+
+            <!-- VIEW: DASHBOARD -->
+            <div id="dashboard-view" class="view-section active">
+                <!-- Dashboard Grid -->
+                <div class="dashboard-grid">
+
+                <!-- Sensor Overview Card -->
+                <div class="sensor-overview-card glass-panel" id="card-sensor-overview">
+                    <div class="overview-card-header">
+                        <div>
+                            <h3>Sensör Özeti</h3>
+                        </div>
+                        <div class="icon-wrapper overview-icon">
+                            <i class="ph ph-gauge"></i>
+                        </div>
+                    </div>
+                    <div class="overview-sensor-grid">
+                        <button class="overview-sensor-item" type="button" data-overview-chart="temp">
+                            <span class="overview-label">Su Isısı</span>
+                            <strong><span id="overview-temp">--</span><small>°C</small></strong>
+                            <em id="overview-status-temp">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="ph">
+                            <span class="overview-label">pH</span>
+                            <strong><span id="overview-ph">--</span></strong>
+                            <em id="overview-status-ph">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="ec">
+                            <span class="overview-label">EC</span>
+                            <strong><span id="overview-ec">--</span><small>µS</small></strong>
+                            <em id="overview-status-ec">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="tds">
+                            <span class="overview-label">TDS</span>
+                            <strong><span id="overview-tds">--</span><small>ppm</small></strong>
+                            <em id="overview-status-tds">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="hum">
+                            <span class="overview-label">Ortam Nemi</span>
+                            <strong><span id="overview-hum">--</span><small>%</small></strong>
+                            <em id="overview-status-hum">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="co2">
+                            <span class="overview-label">CO2 Seviyesi</span>
+                            <strong><span id="overview-co2">--</span><small>ppm</small></strong>
+                            <em id="overview-status-co2">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="flow">
+                            <span class="overview-label">Su Akış Hızı</span>
+                            <strong><span id="overview-flow">--</span><small>L/dk</small></strong>
+                            <em id="overview-status-flow">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="oxygen">
+                            <span class="overview-label">Çözünmüş Oksijen</span>
+                            <strong><span id="overview-oxygen">--</span><small>mg/L</small></strong>
+                            <em id="overview-status-oxygen">Normal</em>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sensor Overview Wide Card - Comparison Layout -->
+                <div class="sensor-overview-card sensor-overview-card-wide glass-panel" id="card-sensor-overview-wide">
+                    <div class="overview-card-header">
+                        <div>
+                            <h3>Sensör Özeti - Geniş Plan</h3>
+                        </div>
+                        <div class="icon-wrapper overview-icon">
+                            <i class="ph ph-grid-four"></i>
+                        </div>
+                    </div>
+                    <div class="overview-sensor-grid overview-sensor-grid-wide">
+                        <button class="overview-sensor-item" type="button" data-overview-chart="temp">
+                            <span class="overview-label">Su Isısı</span>
+                            <strong><span data-overview-value="temp">--</span><small>°C</small></strong>
+                            <em data-overview-status="temp">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="ph">
+                            <span class="overview-label">pH</span>
+                            <strong><span data-overview-value="ph">--</span></strong>
+                            <em data-overview-status="ph">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="ec">
+                            <span class="overview-label">EC</span>
+                            <strong><span data-overview-value="ec">--</span><small>µS</small></strong>
+                            <em data-overview-status="ec">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="tds">
+                            <span class="overview-label">TDS</span>
+                            <strong><span data-overview-value="tds">--</span><small>ppm</small></strong>
+                            <em data-overview-status="tds">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="hum">
+                            <span class="overview-label">Ortam Nemi</span>
+                            <strong><span data-overview-value="hum">--</span><small>%</small></strong>
+                            <em data-overview-status="hum">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="co2">
+                            <span class="overview-label">CO2 Seviyesi</span>
+                            <strong><span data-overview-value="co2">--</span><small>ppm</small></strong>
+                            <em data-overview-status="co2">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="flow">
+                            <span class="overview-label">Su Akış Hızı</span>
+                            <strong><span data-overview-value="flow">--</span><small>L/dk</small></strong>
+                            <em data-overview-status="flow">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="oxygen">
+                            <span class="overview-label">Çözünmüş Oksijen</span>
+                            <strong><span data-overview-value="oxygen">--</span><small>mg/L</small></strong>
+                            <em data-overview-status="oxygen">Normal</em>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sensor Overview Strip Card - Comparison Layout -->
+                <div class="sensor-overview-card sensor-overview-card-strip glass-panel" id="card-sensor-overview-strip">
+                    <div class="overview-card-header">
+                        <div>
+                            <h3>Sensör Özeti - Şerit Plan</h3>
+                        </div>
+                        <div class="icon-wrapper overview-icon">
+                            <i class="ph ph-rows"></i>
+                        </div>
+                    </div>
+                    <div class="overview-sensor-grid overview-sensor-grid-strip">
+                        <button class="overview-sensor-item" type="button" data-overview-chart="temp">
+                            <span class="overview-label">Su Isısı</span>
+                            <strong><span data-overview-value="temp">--</span><small>°C</small></strong>
+                            <em data-overview-status="temp">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="ph">
+                            <span class="overview-label">pH</span>
+                            <strong><span data-overview-value="ph">--</span></strong>
+                            <em data-overview-status="ph">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="ec">
+                            <span class="overview-label">EC</span>
+                            <strong><span data-overview-value="ec">--</span><small>µS</small></strong>
+                            <em data-overview-status="ec">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="tds">
+                            <span class="overview-label">TDS</span>
+                            <strong><span data-overview-value="tds">--</span><small>ppm</small></strong>
+                            <em data-overview-status="tds">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="hum">
+                            <span class="overview-label">Ortam Nemi</span>
+                            <strong><span data-overview-value="hum">--</span><small>%</small></strong>
+                            <em data-overview-status="hum">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="co2">
+                            <span class="overview-label">CO2</span>
+                            <strong><span data-overview-value="co2">--</span><small>ppm</small></strong>
+                            <em data-overview-status="co2">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="flow">
+                            <span class="overview-label">Akış Hızı</span>
+                            <strong><span data-overview-value="flow">--</span><small>L/dk</small></strong>
+                            <em data-overview-status="flow">Normal</em>
+                        </button>
+                        <button class="overview-sensor-item" type="button" data-overview-chart="oxygen">
+                            <span class="overview-label">Oksijen</span>
+                            <strong><span data-overview-value="oxygen">--</span><small>mg/L</small></strong>
+                            <em data-overview-status="oxygen">Normal</em>
+                        </button>
+                    </div>
+                </div>
+                 
+                <!-- Temperature Card -->
+                <div class="sensor-card" id="card-temp" data-type="temp">
+                    <div class="card-header">
+                        <h3>Su Isısı</h3>
+                        <div class="icon-wrapper temp-icon">
+                            <i class="ph ph-thermometer"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-temp">--</span><span class="unit">°C</span>
+                        </div>
+                        <div class="card-trend">
+                            <i class="ph ph-trend-up"></i> <span>Normal</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Humidity Card -->
+                <div class="sensor-card" id="card-hum" data-type="hum">
+                    <div class="card-header">
+                        <h3>Ortam Nemi</h3>
+                        <div class="icon-wrapper hum-icon">
+                            <i class="ph ph-drop"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-hum">--</span><span class="unit">%</span>
+                        </div>
+                        <div class="card-trend">
+                            <i class="ph ph-minus"></i> <span>Sabit</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flow Rate Card -->
+                <div class="sensor-card" id="card-flow" data-type="flow">
+                    <div class="card-header">
+                        <h3>Su Akış Hızı</h3>
+                        <div class="icon-wrapper flow-icon">
+                            <i class="ph ph-gauge"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-flow">--</span><span class="unit">L/dk</span>
+                        </div>
+                        <div class="card-trend">
+                            <i class="ph ph-waves"></i> <span>Normal</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dissolved Oxygen Card -->
+                <div class="sensor-card" id="card-oxygen" data-type="oxygen">
+                    <div class="card-header">
+                        <h3>Çözünmüş Oksijen</h3>
+                        <div class="icon-wrapper oxygen-icon">
+                            <i class="ph ph-waves"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-oxygen">--</span><span class="unit">mg/L</span>
+                        </div>
+                        <div class="card-trend">
+                            <i class="ph ph-check-circle"></i> <span>İdeal</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TDS Card -->
+                <div class="sensor-card" id="card-tds" data-type="tds">
+                    <div class="card-header">
+                        <h3>Su Kalitesi (TDS)</h3>
+                        <div class="icon-wrapper tds-icon">
+                            <i class="ph ph-flask"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-tds">--</span><span class="unit">ppm</span>
+                        </div>
+                        <div class="card-trend warning">
+                            <i class="ph ph-warning-circle"></i> <span>Su Değişimi</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Light Status Card -->
+                <div class="sensor-card" id="card-light" data-type="light">
+                    <div class="card-header">
+                        <h3>Aydınlatma</h3>
+                        <div class="icon-wrapper light-icon">
+                            <i class="ph ph-lightbulb"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-light" style="font-size: 28px;">Kapalı</span>
+                        </div>
+                        <div class="light-schedule-chip">
+                            <i class="ph ph-clock"></i>
+                            <span id="val-light-schedule">--:-- / --:--</span>
+                        </div>
+                        <div class="light-mode-actions">
+                            <button class="toggle-btn" id="btn-light">Aç</button>
+                            <button class="toggle-btn" id="btn-light-auto">Otomatik</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feeding Card (Dashboard Simplified) -->
+                <div class="sensor-card" id="card-feed-simple" style="cursor: pointer; grid-column: span 2;">
+                    <div class="card-header">
+                        <h3>Yemleme Durumu</h3>
+                        <div class="icon-wrapper feed-icon" style="color:#fcd34d; border-color:rgba(252,211,77,0.2);">
+                            <i class="ph ph-fish-simple"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="card-bottom" style="flex-direction:column; align-items:flex-start; width:100%; justify-content:center; gap:8px;">
+                        <div class="status-row" style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                            <span class="label" style="font-size:13px; color:var(--text-muted);">Son Yemleme:</span>
+                            <span id="val-feed-simple" class="highlight" style="font-size:16px; font-weight:600; color:var(--text-main);">Daha Yok</span>
+                        </div>
+                        <div class="status-row" style="width:100%; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--panel-border); padding-top:8px;">
+                            <span class="label" style="font-size:13px; color:var(--text-muted);">Sıradaki:</span>
+                            <span id="val-next-feed" class="highlight" style="font-size:16px; font-weight:600; color:var(--accent-green);">Bekleniyor...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- pH Card -->
+                <div class="sensor-card" id="card-ph" data-type="ph">
+                    <div class="card-header">
+                        <h3>pH Değeri</h3>
+                        <div class="icon-wrapper ph-icon">
+                            <i class="ph ph-test-tube"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-ph">--</span>
+                        </div>
+                        <div class="card-trend">
+                            <i class="ph ph-check-circle"></i> <span>İdeal</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CO2 Card -->
+                <div class="sensor-card" id="card-co2" data-type="co2">
+                    <div class="card-header">
+                        <h3>CO2 Seviyesi</h3>
+                        <div class="icon-wrapper co2-icon">
+                            <i class="ph ph-wind"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-co2">--</span><span class="unit">ppm</span>
+                        </div>
+                        <div style="display:flex; gap: 8px; align-items:center;">
+                            <div class="card-trend" style="margin: 0;">
+                                <i class="ph ph-check-circle"></i> <span>Normal</span>
+                            </div>
+                            <span id="co2-status-badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-green); padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;">Aktif</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EC Card -->
+                <div class="sensor-card" id="card-ec" data-type="ec">
+                    <div class="card-header">
+                        <h3>EC Değeri</h3>
+                        <div class="icon-wrapper ec-icon" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">
+                            <i class="ph ph-lightning"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-ec">--</span><span class="unit">µS/cm</span>
+                        </div>
+                        <div class="card-trend">
+                            <i class="ph ph-check-circle"></i> <span>İdeal</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Water Overflow Alarm Card -->
+                <div class="sensor-card" id="card-alarm">
+                    <div class="card-header">
+                        <h3>Sistem Durumu</h3>
+                        <div class="icon-wrapper alarm-icon">
+                            <i class="ph ph-warning"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value alarm-value">
+                            <span id="val-alarm" style="font-size: 24px;">Normal</span>
+                        </div>
+                        <div class="card-trend" id="alarm-trend">
+                            <i class="ph ph-shield-check"></i> <span>Taşkın Yok</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Motor Card -->
+                <div class="sensor-card" id="card-filter">
+                    <div class="card-header">
+                        <h3>Filtre Motoru</h3>
+                        <div class="icon-wrapper filter-icon">
+                            <i class="ph ph-fan"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-filter" style="font-size: 24px;">Kapalı</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                            <button class="toggle-btn filter-btn" id="btn-filter" style="margin:0;">Çalıştır</button>
+                            <span id="val-filter-clean" style="font-size: 11px; color: var(--text-muted);">Henüz yok</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cooling Fan Card -->
+                <div class="sensor-card" id="card-cooling">
+                    <div class="card-header">
+                        <h3>Soğutma Fanı</h3>
+                        <div class="icon-wrapper cooling-icon">
+                            <i class="ph ph-snowflake"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-cooling" style="font-size: 24px;">Kapalı</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                            <button class="toggle-btn" id="btn-cooling" style="margin:0;">Oto: Açık</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Air Motor Card -->
+                <div class="sensor-card" id="card-air">
+                    <div class="card-header">
+                        <h3>Hava Motoru</h3>
+                        <div class="icon-wrapper air-icon">
+                            <i class="ph ph-waves"></i>
+                        </div>
+                    </div>
+                    <div class="card-bottom">
+                        <div class="card-value">
+                            <span id="val-air" style="font-size: 24px;">Kapalı</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                            <button class="toggle-btn" id="btn-air" style="margin:0;">Aç</button>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                </div>
+
+            <!-- Camera Modal (Fullscreen Overlay) -->
+            <div class="camera-modal-overlay" id="cameraModal" onclick="closeCameraModal(event)">
+                <div class="camera-modal glass-panel" onclick="event.stopPropagation()">
+                    <div class="camera-modal-header">
+                        <div class="camera-modal-title">
+                            <i class="ph ph-video-camera"></i>
+                            <h3>Canlı Akvaryum Kamerası</h3>
+                            <div class="status-indicator online"></div>
+                        </div>
+                        <button class="camera-modal-close" onclick="closeCameraModal(event)">
+                            <i class="ph ph-x"></i>
+                        </button>
+                    </div>
+                    <div class="camera-modal-body">
+                        <video
+                            id="camera-video"
+                            class="camera-video-frame"
+                            src="Video/akvaryumvideo.mp4"
+                            muted
+                            loop
+                            playsinline>
+                        </video>
+                    </div>
+                </div>
+            </div>
+
+            </div> <!-- End Dashboard View -->
+
+            <!-- Product Detail Modal -->
+            <div class="product-modal-overlay" id="productModal" onclick="closeProductModal(event)">
+                <div class="product-modal glass-panel" onclick="event.stopPropagation()">
+                    <button class="camera-modal-close product-modal-close" onclick="closeProductModal(event)">
+                        <i class="ph ph-x"></i>
+                    </button>
+                    <div class="product-modal-media">
+                        <img id="productModalImage" src="" alt="">
+                    </div>
+                    <div class="product-modal-content">
+                        <span class="product-modal-kicker" id="productModalCategory">Akvaryum Ürünü</span>
+                        <h3 id="productModalTitle">--</h3>
+                        <p id="productModalDescription">--</p>
+                        <div class="product-modal-specs" id="productModalSpecs"></div>
+                        <div class="product-modal-footer">
+                            <span id="productModalPrice">--</span>
+                            <button class="toggle-btn product-confirm-btn" type="button">Satın Alma Talebi Oluştur</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: SENSÖR GRAFİKLERİ -->
+            <div id="charts-view" class="view-section" style="display: none;">
+                <div class="history-grid">
+                    <!-- Isı Grafiği -->
+                    <div class="chart-card glass-panel" data-chart="temp" onclick="openChartModal('temp')">
+                        <div class="chart-card-header">
+                            <div class="chart-card-title">
+                                <div class="icon-wrapper temp-icon"><i class="ph ph-thermometer"></i></div>
+                                <h3>Su Isısı (°C)</h3>
+                            </div>
+                            <div class="chart-card-badges">
+                                <span class="chart-minmax" id="minmax-temp">↓ -- / ↑ --</span>
+                                <div class="chart-card-badge temp-badge">Canlı</div>
+                            </div>
+                        </div>
+                        <div class="chart-card-body">
+                            <canvas id="chart-temp-history"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- TDS Grafiği -->
+                    <div class="chart-card glass-panel" data-chart="tds" onclick="openChartModal('tds')">
+                        <div class="chart-card-header">
+                            <div class="chart-card-title">
+                                <div class="icon-wrapper tds-icon"><i class="ph ph-flask"></i></div>
+                                <h3>Su Kalitesi - TDS (ppm)</h3>
+                            </div>
+                            <div class="chart-card-badges">
+                                <span class="chart-minmax" id="minmax-tds">↓ -- / ↑ --</span>
+                                <div class="chart-card-badge tds-badge">Canlı</div>
+                            </div>
+                        </div>
+                        <div class="chart-card-body">
+                            <canvas id="chart-tds-history"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- pH Grafiği -->
+                    <div class="chart-card glass-panel" data-chart="ph" onclick="openChartModal('ph')">
+                        <div class="chart-card-header">
+                            <div class="chart-card-title">
+                                <div class="icon-wrapper ph-icon"><i class="ph ph-test-tube"></i></div>
+                                <h3>pH Değeri</h3>
+                            </div>
+                            <div class="chart-card-badges">
+                                <span class="chart-minmax" id="minmax-ph">↓ -- / ↑ --</span>
+                                <div class="chart-card-badge ph-badge">Canlı</div>
+                            </div>
+                        </div>
+                        <div class="chart-card-body">
+                            <canvas id="chart-ph-history"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- CO2 Grafiği -->
+                    <div class="chart-card glass-panel" data-chart="co2" onclick="openChartModal('co2')">
+                        <div class="chart-card-header">
+                            <div class="chart-card-title">
+                                <div class="icon-wrapper co2-icon"><i class="ph ph-wind"></i></div>
+                                <h3>CO2 Seviyesi (ppm)</h3>
+                            </div>
+                            <div class="chart-card-badges">
+                                <span class="chart-minmax" id="minmax-co2">↓ -- / ↑ --</span>
+                                <div class="chart-card-badge co2-badge">Canlı</div>
+                            </div>
+                        </div>
+                        <div class="chart-card-body">
+                            <canvas id="chart-co2-history"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Nem Grafiği -->
+                    <div class="chart-card glass-panel" data-chart="hum" onclick="openChartModal('hum')">
+                        <div class="chart-card-header">
+                            <div class="chart-card-title">
+                                <div class="icon-wrapper hum-icon"><i class="ph ph-drop"></i></div>
+                                <h3>Ortam Nemi (%)</h3>
+                            </div>
+                            <div class="chart-card-badges">
+                                <span class="chart-minmax" id="minmax-hum">↓ -- / ↑ --</span>
+                                <div class="chart-card-badge hum-badge">Canlı</div>
+                            </div>
+                        </div>
+                        <div class="chart-card-body">
+                            <canvas id="chart-hum-history"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card glass-panel" data-chart="flow" onclick="openChartModal('flow')">
+                        <div class="chart-card-header">
+                            <div class="chart-card-title">
+                                <div class="icon-wrapper flow-icon"><i class="ph ph-gauge"></i></div>
+                                <h3>Su Akış Hızı (L/dk)</h3>
+                            </div>
+                            <div class="chart-card-badges">
+                                <span class="chart-minmax" id="minmax-flow">↓ -- / ↑ --</span>
+                                <div class="chart-card-badge flow-badge">Canlı</div>
+                            </div>
+                        </div>
+                        <div class="chart-card-body">
+                            <canvas id="chart-flow-history"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card glass-panel" data-chart="oxygen" onclick="openChartModal('oxygen')">
+                        <div class="chart-card-header">
+                            <div class="chart-card-title">
+                                <div class="icon-wrapper oxygen-icon"><i class="ph ph-waves"></i></div>
+                                <h3>Çözünmüş Oksijen (mg/L)</h3>
+                            </div>
+                            <div class="chart-card-badges">
+                                <span class="chart-minmax" id="minmax-oxygen">↓ -- / ↑ --</span>
+                                <div class="chart-card-badge oxygen-badge">Canlı</div>
+                            </div>
+                        </div>
+                        <div class="chart-card-body">
+                            <canvas id="chart-oxygen-history"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- EC History Card -->
+                    <div class="chart-card glass-panel" id="history-ec" data-chart="ec">
+                        <div class="chart-card-header">
+                            <div class="chart-card-title">
+                                <div class="icon-wrapper ec-icon" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;"><i class="ph ph-lightning"></i></div>
+                                <h3>EC Değeri (µS/cm)</h3>
+                            </div>
+                            <div class="chart-card-badges">
+                                <span class="chart-minmax" id="minmax-ec">↓ -- / ↑ --</span>
+                                <div class="chart-card-badge ec-badge" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">Canlı</div>
+                            </div>
+                        </div>
+                        <div class="chart-card-body">
+                            <canvas id="chart-ec-history"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End History View -->
+
+            <!-- Chart Detail Modal -->
+            <div class="chart-modal-overlay" id="chartModal" onclick="closeChartModal(event)">
+                <div class="chart-modal glass-panel" onclick="event.stopPropagation()">
+                    <div class="chart-modal-header">
+                        <div class="chart-modal-title">
+                            <div class="icon-wrapper" id="chartModalIcon"><i class="ph ph-thermometer"></i></div>
+                            <h3 id="chartModalTitle">--</h3>
+                            <div class="chart-card-badge" id="chartModalBadge">Canlı</div>
+                        </div>
+                        <div class="chart-modal-actions">
+                            <input type="date" id="chartDateSelect" class="chart-date-input" title="Tarih Seç">
+                            <button class="camera-modal-close" onclick="closeChartModal(event)">
+                                <i class="ph ph-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-modal-stats" id="chartModalStats">
+                        <div class="stat-item">
+                            <span class="stat-label">Anlık Değer</span>
+                            <span class="stat-value" id="stat-current">--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">24s Min</span>
+                            <span class="stat-value stat-min" id="stat-min">--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">24s Maks</span>
+                            <span class="stat-value stat-max" id="stat-max">--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Ortalama</span>
+                            <span class="stat-value stat-avg" id="stat-avg">--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Durum</span>
+                            <span class="stat-value stat-status" id="stat-status">--</span>
+                        </div>
+                    </div>
+                    <div class="chart-modal-body">
+                        <canvas id="chartModalCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: HISTORY DATA (ALARM LOGS) -->
+            <div id="history-data-view" class="view-section" style="display: none;">
+                <div class="settings-header" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2>Sistem Geçmişi & Alarmlar</h2>
+                        <p class="subtitle">Sistemde oluşan tüm uyarılar ve alarmlar burada kronolojik olarak kaydedilir.</p>
+                    </div>
+                    <button class="toggle-btn" id="btn-clear-logs" style="background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: transparent;">Geçmişi Temizle</button>
+                </div>
+                
+                <div class="glass-panel" style="padding: 0; overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead style="background: rgba(0, 0, 0, 0.2); border-bottom: 1px solid var(--panel-border);">
+                            <tr>
+                                <th style="padding: 16px; color: var(--text-muted); font-weight: 500;">Tarih</th>
+                                <th style="padding: 16px; color: var(--text-muted); font-weight: 500;">Saat</th>
+                                <th style="padding: 16px; color: var(--text-muted); font-weight: 500;">Sensör</th>
+                                <th style="padding: 16px; color: var(--text-muted); font-weight: 500;">Durum / Uyarı</th>
+                                <th style="padding: 16px; color: var(--text-muted); font-weight: 500;">Değer</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alarm-log-table">
+                            <!-- JS ile doldurulacak -->
+                        </tbody>
+                    </table>
+                    <div id="empty-log-msg" style="padding: 40px; text-align: center; color: var(--text-muted); display: none;">
+                        <i class="ph ph-check-circle" style="font-size: 48px; color: var(--accent-green); margin-bottom: 16px;"></i>
+                        <p>Kayıtlı hiçbir alarm bulunmamaktadır.</p>
+                    </div>
+                </div>
+            </div> <!-- End History Data View -->
+
+            <!-- VIEW: FEEDING PROGRAM -->
+            <div id="feeding-view" class="view-section" style="display: none;">
+                <div class="feeding-page-layout" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; max-width: 1000px; margin: 0 auto;">
+                    <!-- Detailed Feeding Card -->
+                    <div class="sensor-card glass-panel" id="card-feed-detailed" style="height: 100%; display: flex; flex-direction: column;">
+                        <div class="card-header">
+                            <div class="icon-wrapper feed-icon">
+                                <i class="ph ph-fish-simple"></i>
+                            </div>
+                            <h3>Yemleme Kontrol Paneli</h3>
+                        </div>
+                        
+                        <div class="feed-status" style="background: rgba(0,0,0,0.2); padding: 16px; border-radius: 12px; margin-bottom: 24px;">
+                            <span class="label" style="font-size: 16px;">Son Yemleme:</span>
+                            <span id="val-feed-detailed" class="highlight" style="font-size: 20px;">Daha Yok</span>
+                        </div>
+                        
+                        <div class="feed-schedule" style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; margin-bottom: 24px;">
+                            <div class="schedule-header" style="margin-bottom: 16px;">
+                                <h4 style="font-size: 16px;">Otomatik Yemleme Programı</h4>
+                                <div class="schedule-input-group" style="display: flex; flex-direction: column; gap: 12px;">
+                                    <div style="display: flex; gap: 10px;">
+                                        <input type="time" id="feed-time-input" class="time-input" style="padding: 8px 12px; font-size: 15px; flex: 1;">
+                                        <button id="btn-add-schedule" class="add-btn" style="width: 36px; height: 36px; font-size: 18px;" title="Ekle"><i class="ph ph-plus"></i></button>
+                                    </div>
+                                    <div class="day-selectors" id="feed-days-group" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                        <label class="day-label"><input type="checkbox" value="1" checked> <span>Pzt</span></label>
+                                        <label class="day-label"><input type="checkbox" value="2" checked> <span>Sal</span></label>
+                                        <label class="day-label"><input type="checkbox" value="3" checked> <span>Çar</span></label>
+                                        <label class="day-label"><input type="checkbox" value="4" checked> <span>Per</span></label>
+                                        <label class="day-label"><input type="checkbox" value="5" checked> <span>Cum</span></label>
+                                        <label class="day-label"><input type="checkbox" value="6" checked> <span>Cmt</span></label>
+                                        <label class="day-label"><input type="checkbox" value="0" checked> <span>Paz</span></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <ul id="schedule-list" class="schedule-list" style="max-height: 300px;">
+                                <!-- JS ile eklenecek programlar -->
+                            </ul>
+                        </div>
+
+                        <button class="toggle-btn feed-btn" id="btn-feed" style="width: 100%; padding: 16px; font-size: 16px; margin-top: auto;">Şimdi Manuel Yem Ver</button>
+                    </div>
+
+                    <!-- Past Feedings Card -->
+                    <div class="sensor-card glass-panel" id="card-past-feedings" style="height: 100%; display: flex; flex-direction: column;">
+                        <div class="card-header">
+                            <div class="icon-wrapper" style="background: rgba(16, 185, 129, 0.1); color: var(--accent-green);">
+                                <i class="ph ph-clock-counter-clockwise"></i>
+                            </div>
+                            <h3>Geçmiş Yemlemeler</h3>
+                        </div>
+                        <div style="flex: 1; position: relative; min-height: 0; margin-top: 16px;">
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; overflow-y: auto;">
+                                <ul id="past-feedings-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
+                                    <!-- JS ile eklenecek -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End Feeding View -->
+
+            <!-- VIEW: LIGHTING AUTOMATION -->
+            <div id="lighting-view" class="view-section" style="display: none;">
+                <div class="settings-page-layout">
+                    <div class="settings-header">
+                        <h2>Aydınlatma Otomasyonu</h2>
+                        <p class="subtitle">Akvaryum tipine göre günlük ışık süresi, geçişler ve spektrum dengesi.</p>
+                    </div>
+
+                    <div class="lighting-layout">
+                        <div class="sensor-card glass-panel lighting-control-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper light-icon"><i class="ph ph-lightbulb"></i></div>
+                                <h3>Akvaryum Tipi</h3>
+                            </div>
+                            <div class="lighting-type-grid" id="lighting-type-group">
+                                <button class="lighting-type-btn active" type="button" data-lighting-type="freshwater">Tatlı su akvaryumu</button>
+                                <button class="lighting-type-btn" type="button" data-lighting-type="freshwater-planted">Tatlı su + bitki akvaryumu</button>
+                                <button class="lighting-type-btn" type="button" data-lighting-type="plant-only">Bitki akvaryumu</button>
+                                <button class="lighting-type-btn" type="button" data-lighting-type="saltwater">Tuzlu su akvaryumu</button>
+                                <button class="lighting-type-btn" type="button" data-lighting-type="saltwater-planted">Tuzlu su + bitki akvaryumu</button>
+                            </div>
+                        </div>
+
+                        <div class="sensor-card glass-panel lighting-control-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper light-icon"><i class="ph ph-clock"></i></div>
+                                <h3>Günlük Plan</h3>
+                            </div>
+                            <div class="lighting-schedule-grid">
+                                <div class="input-group">
+                                    <label>Açılış</label>
+                                    <input type="time" id="lighting-start" class="setting-input">
+                                </div>
+                                <div class="input-group">
+                                    <label>Kapanış</label>
+                                    <input type="time" id="lighting-end" class="setting-input">
+                                </div>
+                                <div class="input-group">
+                                    <label>Yumuşak Açılış (dk)</label>
+                                    <input type="number" id="lighting-ramp-up" class="setting-input" min="0" max="120" step="5">
+                                </div>
+                                <div class="input-group">
+                                    <label>Yumuşak Kapanış (dk)</label>
+                                    <input type="number" id="lighting-ramp-down" class="setting-input" min="0" max="120" step="5">
+                                </div>
+                            </div>
+                            <label class="lighting-toggle-row">
+                                <input type="checkbox" id="lighting-moonlight">
+                                <span>Gece düşük mavi ay ışığı</span>
+                            </label>
+                        </div>
+
+                        <div class="sensor-card glass-panel lighting-spectrum-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper light-icon"><i class="ph ph-sliders-horizontal"></i></div>
+                                <h3>Spektrum Dengesi</h3>
+                            </div>
+                            <div class="spectrum-list">
+                                <div class="spectrum-row" data-channel="white">
+                                    <div><strong>Beyaz</strong><span>Gün ışığı / görünür parlaklık</span></div>
+                                    <div class="spectrum-meter"><span id="spectrum-white-bar"></span></div>
+                                    <em id="spectrum-white-value">--</em>
+                                </div>
+                                <div class="spectrum-row" data-channel="blue">
+                                    <div><strong>Mavi</strong><span>Derinlik, mercan ve gece geçişi</span></div>
+                                    <div class="spectrum-meter"><span id="spectrum-blue-bar"></span></div>
+                                    <em id="spectrum-blue-value">--</em>
+                                </div>
+                                <div class="spectrum-row" data-channel="red">
+                                    <div><strong>Kırmızı</strong><span>Bitki fotosentezi desteği</span></div>
+                                    <div class="spectrum-meter"><span id="spectrum-red-bar"></span></div>
+                                    <em id="spectrum-red-value">--</em>
+                                </div>
+                                <div class="spectrum-row" data-channel="green">
+                                    <div><strong>Yeşil</strong><span>Doğal renk dengesi</span></div>
+                                    <div class="spectrum-meter"><span id="spectrum-green-bar"></span></div>
+                                    <em id="spectrum-green-value">--</em>
+                                </div>
+                                <div class="spectrum-row" data-channel="violet">
+                                    <div><strong>Mor / UV</strong><span>Aktinik vurgu ve floresans</span></div>
+                                    <div class="spectrum-meter"><span id="spectrum-violet-bar"></span></div>
+                                    <em id="spectrum-violet-value">--</em>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sensor-card glass-panel lighting-summary-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper light-icon"><i class="ph ph-info"></i></div>
+                                <h3>Önerilen Plan</h3>
+                            </div>
+                            <div class="lighting-plan-summary">
+                                <div><span>Fotoperiyot</span><strong id="lighting-duration">--</strong></div>
+                                <div><span>Yoğunluk</span><strong id="lighting-intensity">--</strong></div>
+                                <div><span>Odak</span><strong id="lighting-focus">--</strong></div>
+                            </div>
+                            <p id="lighting-guidance" class="lighting-guidance"></p>
+                            <button class="toggle-btn filter-btn" id="btn-save-lighting" type="button">Aydınlatma Planını Kaydet</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: SETTINGS -->
+            <div id="settings-view" class="view-section" style="display: none;">
+                <div class="settings-page-layout">
+                    <div class="settings-header">
+                        <h2>Sistem Ayarları</h2>
+                        <p class="subtitle">Sensörlerin ideal alarm ve grafik gösterim aralıklarını (minimum ve maksimum) buradan özelleştirebilirsiniz.</p>
+                    </div>
+
+                    <div class="settings-grid">
+                        <!-- Isı Ayarları -->
+                        <div class="sensor-card glass-panel settings-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper temp-icon"><i class="ph ph-thermometer"></i></div>
+                                <h3>Su Isısı (°C)</h3>
+                            </div>
+                            <div class="recommended-value" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; margin-top: -10px; display: flex; align-items: center; gap: 6px;">
+                                <i class="ph ph-info"></i> Tavsiye edilen: 23.0 - 28.0
+                            </div>
+                            <div class="settings-inputs">
+                                <div class="input-group">
+                                    <label>Minimum Değer</label>
+                                    <input type="number" id="set-temp-min" class="setting-input" step="0.5">
+                                </div>
+                                <div class="input-group">
+                                    <label>Maksimum Değer</label>
+                                    <input type="number" id="set-temp-max" class="setting-input" step="0.5">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- WhatsApp Alarm Bildirimi -->
+                        <div class="sensor-card glass-panel settings-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper" style="background: rgba(37, 211, 102, 0.15); color: #25D366;"><i class="ph ph-whatsapp-logo"></i></div>
+                                <h3>WhatsApp Alarm Bildirimi</h3>
+                            </div>
+                            <div class="recommended-value" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; margin-top: -10px; display: flex; align-items: center; gap: 6px;">
+                                <i class="ph ph-info"></i> Alarm oluşunca WhatsApp mesaj taslağı açılır.
+                            </div>
+                            <div class="settings-inputs">
+                                <label class="lighting-toggle-row">
+                                    <input type="checkbox" id="set-whatsapp-enabled">
+                                    <span>WhatsApp bildirimi aktif</span>
+                                </label>
+                                <div class="input-group">
+                                    <label>Telefon Numarası</label>
+                                    <input type="tel" id="set-whatsapp-phone" class="setting-input" placeholder="905551234567">
+                                </div>
+                                <div class="input-group">
+                                    <label>Webhook URL (opsiyonel)</label>
+                                    <input type="url" id="set-whatsapp-webhook" class="setting-input" placeholder="https://.../alarm-webhook">
+                                </div>
+                                <button class="toggle-btn filter-btn" id="btn-test-whatsapp" type="button">Test Alarmı Gönder</button>
+                            </div>
+                        </div>
+
+                        <!-- Telegram Alarm Bildirimi -->
+                        <div class="sensor-card glass-panel settings-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;"><i class="ph ph-paper-plane-tilt"></i></div>
+                                <h3>Telegram Alarm Bildirimi</h3>
+                            </div>
+                            <div class="recommended-value" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; margin-top: -10px; display: flex; align-items: center; gap: 6px;">
+                                <i class="ph ph-info"></i> BotFather token ve chat ID ile otomatik mesaj gönderir.
+                            </div>
+                            <div class="settings-inputs">
+                                <label class="lighting-toggle-row">
+                                    <input type="checkbox" id="set-telegram-enabled">
+                                    <span>Telegram bildirimi aktif</span>
+                                </label>
+                                <div class="input-group">
+                                    <label>Bot Token</label>
+                                    <input type="password" id="set-telegram-token" class="setting-input" placeholder="123456:ABC-DEF...">
+                                </div>
+                                <div class="input-group">
+                                    <label>Chat ID</label>
+                                    <input type="text" id="set-telegram-chat-id" class="setting-input" placeholder="123456789 veya -100...">
+                                </div>
+                                <button class="toggle-btn filter-btn telegram-secondary-btn" id="btn-find-telegram-chat" type="button">Chat ID'yi Bul</button>
+                                <div class="telegram-status-message" id="telegram-status-message">Telegram test sonucu burada görünür.</div>
+                                <button class="toggle-btn filter-btn" id="btn-test-telegram" type="button">Telegram Test Alarmı Gönder</button>
+                            </div>
+                        </div>
+
+                        <!-- TDS Ayarları -->
+                        <div class="sensor-card glass-panel settings-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper tds-icon"><i class="ph ph-flask"></i></div>
+                                <h3>Su Kalitesi (ppm)</h3>
+                            </div>
+                            <div class="recommended-value" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; margin-top: -10px; display: flex; align-items: center; gap: 6px;">
+                                <i class="ph ph-info"></i> Tavsiye edilen: 150 - 300
+                            </div>
+                            <div class="settings-inputs">
+                                <div class="input-group">
+                                    <label>Minimum Değer</label>
+                                    <input type="number" id="set-tds-min" class="setting-input" step="10">
+                                </div>
+                                <div class="input-group">
+                                    <label>Maksimum Değer</label>
+                                    <input type="number" id="set-tds-max" class="setting-input" step="10">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- pH Ayarları -->
+                        <div class="sensor-card glass-panel settings-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper ph-icon"><i class="ph ph-test-tube"></i></div>
+                                <h3>pH Seviyesi</h3>
+                            </div>
+                            <div class="recommended-value" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; margin-top: -10px; display: flex; align-items: center; gap: 6px;">
+                                <i class="ph ph-info"></i> Tavsiye edilen: 6.5 - 7.8
+                            </div>
+                            <div class="settings-inputs">
+                                <div class="input-group">
+                                    <label>Minimum Değer</label>
+                                    <input type="number" id="set-ph-min" class="setting-input" step="0.1">
+                                </div>
+                                <div class="input-group">
+                                    <label>Maksimum Değer</label>
+                                    <input type="number" id="set-ph-max" class="setting-input" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CO2 Ayarları -->
+                        <div class="sensor-card glass-panel settings-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper co2-icon"><i class="ph ph-wind"></i></div>
+                                <h3>CO2 Seviyesi (ppm)</h3>
+                            </div>
+                            <div class="recommended-value" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; margin-top: -10px; display: flex; align-items: center; gap: 6px;">
+                                <i class="ph ph-info"></i> Tavsiye edilen: 15 - 35
+                            </div>
+                            <div class="settings-inputs">
+                                <div class="input-group">
+                                    <label>Minimum Değer</label>
+                                    <input type="number" id="set-co2-min" class="setting-input" step="1">
+                                </div>
+                                <div class="input-group">
+                                    <label>Maksimum Değer</label>
+                                    <input type="number" id="set-co2-max" class="setting-input" step="1">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- EC Ayarları -->
+                        <div class="sensor-card glass-panel settings-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper ec-icon" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;"><i class="ph ph-lightning"></i></div>
+                                <h3>EC Değeri (µS/cm)</h3>
+                            </div>
+                            <div class="recommended-value" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; margin-top: -10px; display: flex; align-items: center; gap: 6px;">
+                                <i class="ph ph-info"></i> Tavsiye edilen: 300 - 800
+                            </div>
+                            <div class="settings-inputs">
+                                <div class="input-group">
+                                    <label>Minimum Değer</label>
+                                    <input type="number" id="set-ec-min" class="setting-input" step="10">
+                                </div>
+                                <div class="input-group">
+                                    <label>Maksimum Değer</label>
+                                    <input type="number" id="set-ec-max" class="setting-input" step="10">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Nem Ayarları -->
+                        <div class="sensor-card glass-panel settings-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper hum-icon"><i class="ph ph-drop"></i></div>
+                                <h3>Ortam Nemi (%)</h3>
+                            </div>
+                            <div class="recommended-value" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; margin-top: -10px; display: flex; align-items: center; gap: 6px;">
+                                <i class="ph ph-info"></i> Tavsiye edilen: 50 - 75
+                            </div>
+                            <div class="settings-inputs">
+                                <div class="input-group">
+                                    <label>Minimum Değer</label>
+                                    <input type="number" id="set-hum-min" class="setting-input" step="1">
+                                </div>
+                                <div class="input-group">
+                                    <label>Maksimum Değer</label>
+                                    <input type="number" id="set-hum-max" class="setting-input" step="1">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Akış Hızı Ayarları -->
+                        <div class="sensor-card glass-panel settings-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper flow-icon"><i class="ph ph-gauge"></i></div>
+                                <h3>Su Akış Hızı (L/dk)</h3>
+                            </div>
+                            <div class="recommended-value" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; margin-top: -10px; display: flex; align-items: center; gap: 6px;">
+                                <i class="ph ph-info"></i> Tavsiye edilen: 5.0 - 12.0
+                            </div>
+                            <div class="settings-inputs">
+                                <div class="input-group">
+                                    <label>Minimum Değer</label>
+                                    <input type="number" id="set-flow-min" class="setting-input" step="0.5">
+                                </div>
+                                <div class="input-group">
+                                    <label>Maksimum Değer</label>
+                                    <input type="number" id="set-flow-max" class="setting-input" step="0.5">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Çözünmüş Oksijen Ayarları -->
+                        <div class="sensor-card glass-panel settings-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper oxygen-icon"><i class="ph ph-waves"></i></div>
+                                <h3>Çözünmüş Oksijen (mg/L)</h3>
+                            </div>
+                            <div class="recommended-value" style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; margin-top: -10px; display: flex; align-items: center; gap: 6px;">
+                                <i class="ph ph-info"></i> Tavsiye edilen: 6.0 - 9.0
+                            </div>
+                            <div class="settings-inputs">
+                                <div class="input-group">
+                                    <label>Minimum Değer</label>
+                                    <input type="number" id="set-oxygen-min" class="setting-input" step="0.1">
+                                </div>
+                                <div class="input-group">
+                                    <label>Maksimum Değer</label>
+                                    <input type="number" id="set-oxygen-max" class="setting-input" step="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-actions">
+                        <button class="toggle-btn filter-btn" id="btn-save-settings">Ayarları Kaydet</button>
+                    </div>
+                </div>
+            </div> <!-- End Settings View -->
+
+            <!-- VIEW: USERS -->
+            <div id="users-view" class="view-section" style="display: none;">
+                <div class="settings-page-layout">
+                    <div class="settings-header">
+                        <h2>Kullanıcılar</h2>
+                        <p class="subtitle">Kullanıcı oluşturun ve dashboard kartı / canlı kamera izinlerini yönetin.</p>
+                    </div>
+
+                    <div class="users-layout">
+                        <div class="sensor-card glass-panel users-form-card">
+                            <div class="card-header">
+                                <div class="icon-wrapper"><i class="ph ph-user-plus"></i></div>
+                                <h3>Kullanıcı Bilgileri</h3>
+                            </div>
+                            <input type="hidden" id="user-edit-id">
+                            <div class="settings-inputs">
+                                <div class="input-group">
+                                    <label>Kullanıcı Adı</label>
+                                    <input type="text" id="user-username" class="setting-input" autocomplete="off">
+                                </div>
+                                <div class="input-group">
+                                    <label>Şifre</label>
+                                    <input type="text" id="user-password" class="setting-input" autocomplete="off">
+                                </div>
+                                <label class="lighting-toggle-row">
+                                    <input type="checkbox" id="user-is-admin">
+                                    <span>Full yetkili kullanıcı</span>
+                                </label>
+                            </div>
+
+                            <div class="permission-section">
+                                <h4>Dashboard Kart İzinleri</h4>
+                                <div class="permission-grid" id="dashboard-permissions"></div>
+                            </div>
+
+                            <div class="permission-section">
+                                <h4>Sol Menü İzinleri</h4>
+                                <div class="permission-grid" id="nav-permissions"></div>
+                            </div>
+
+                            <div class="permission-section">
+                                <h4>Canlı Kamera İzni</h4>
+                                <label class="permission-item">
+                                    <input type="checkbox" id="permission-camera">
+                                    <span>Canlı kamera kartı ve büyük görüntü</span>
+                                </label>
+                            </div>
+
+                            <div class="user-form-actions">
+                                <button class="toggle-btn filter-btn" id="btn-save-user" type="button">Kullanıcı Kaydet</button>
+                                <button class="toggle-btn" id="btn-reset-user-form" type="button">Temizle</button>
+                            </div>
+                        </div>
+
+                        <div class="glass-panel users-list-panel">
+                            <div class="users-list-header">
+                                <h3><i class="ph ph-users"></i> Kayıtlı Kullanıcılar</h3>
+                            </div>
+                            <div id="users-list" class="users-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: ADMIN PANEL -->
+            <div id="admin-panel-view" class="view-section" style="display: none;">
+                <div class="settings-page-layout">
+                    <div class="settings-header">
+                        <h2>Yonetim Paneli</h2>
+                        <p class="subtitle">Site genelindeki kart, baslik, urun, banner ve gorsel iceriklerini yonetin.</p>
+                    </div>
+                    <div id="admin-panel-root" class="admin-panel-root"></div>
+                </div>
+            </div>
+
+            <!-- VIEW: AD DETAILS -->
+            <div id="ad-view" class="view-section" style="display: none;">
+                <div class="settings-header" style="margin-bottom: 24px;">
+                    <h2>Ürün Detayı</h2>
+                    <p class="subtitle">Bu ürün için satın alma yönlendirmesi daha sonra aktif edilecektir.</p>
+                </div>
+                <div class="sensor-card glass-panel" style="text-align: center; padding: 40px; margin: 0 auto; max-width: 600px;">
+                    <div style="font-size: 64px; color: var(--accent-blue); margin-bottom: 20px;"><i class="ph ph-shopping-cart"></i></div>
+                    <h3 style="font-size: 24px; margin-bottom: 12px;">Satın Alma Sayfası Hazırlanıyor</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 24px;">İlgilendiğiniz ürün için detaylı inceleme ve satın alma bağlantısı yakında buraya eklenecektir.</p>
+                    <button class="toggle-btn" onclick="document.querySelector('.nav-item[data-view=\'dashboard-view\']').click()">Dashboard'a Dön</button>
+                </div>
+            </div>
+
+            <!-- VIEW: TERMINAL -->
+            <div id="terminal-view" class="view-section" style="display: none;">
+                <div class="settings-header" style="margin-bottom: 24px;">
+                    <h2>ESP32 Ham Veri Terminali</h2>
+                    <p class="subtitle">Arduino'dan gelen ham JSON veri akışını buradan canlı olarak izleyebilirsiniz.</p>
+                </div>
+                
+                <div class="glass-panel" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-muted); font-size: 14px;"><i class="ph ph-plugs-connected"></i> Bağlantı Aktif</span>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="btn-term-pause" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: var(--text-main); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; transition: all 0.2s;"><i class="ph ph-pause"></i> Duraklat</button>
+                            <button id="btn-term-clear" style="background: rgba(239, 68, 68, 0.15); border: 1px solid transparent; color: var(--accent-red); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; transition: all 0.2s;"><i class="ph ph-trash"></i> Temizle</button>
+                        </div>
+                    </div>
+                    
+                    <div id="terminal-output" style="background: #0f172a; color: #a5b4fc; font-family: 'Courier New', Courier, monospace; padding: 16px; border-radius: 8px; height: 500px; overflow-y: auto; font-size: 14px; line-height: 1.6; border: 1px solid #1e293b;">
+                        <div style="color: #64748b; margin-bottom: 10px; text-align: center;">--- Terminal Bağlandı ---</div>
+                    </div>
+                </div>
+            </div> <!-- End Terminal View -->
+
+            <!-- Main Footer -->
+            <footer class="main-footer glass-panel">
+                <div class="footer-content">
+                    <div class="footer-section">
+                        <h4>Akvardinio Sistemleri</h4>
+                        <p>Akvaryumunuz için yeni nesil akıllı takip ve yönetim asistanı. Teknolojiyi doğayla buluşturuyoruz.</p>
+                    </div>
+                    <div class="footer-section">
+                        <h4>İletişim</h4>
+                        <p><i class="ph ph-map-pin"></i> Akvaryum Sok. No:42, Suadiye / İstanbul</p>
+                        <p><i class="ph ph-phone"></i> +90 (555) 123 45 67</p>
+                        <p><i class="ph ph-envelope"></i> info@akvardinio.com.tr</p>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Hızlı Bağlantılar</h4>
+                        <a href="#">Kullanım Koşulları</a>
+                        <a href="#">Gizlilik Politikası</a>
+                        <a href="#">Sıkça Sorulan Sorular</a>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Sosyal Medya</h4>
+                        <div class="social-links">
+                            <a href="#" class="social-icon facebook" title="Facebook"><i class="ph ph-facebook-logo"></i></a>
+                            <a href="#" class="social-icon instagram" title="Instagram"><i class="ph ph-instagram-logo"></i></a>
+                            <a href="#" class="social-icon tiktok" title="TikTok"><i class="ph ph-tiktok-logo"></i></a>
+                            <a href="#" class="social-icon whatsapp" title="WhatsApp"><i class="ph ph-whatsapp-logo"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p>&copy; 2026 Akvardinio Akıllı Akvaryum Sistemleri. Tüm Hakları Saklıdır.</p>
+                </div>
+            </footer>
+
+        </main>
+
+        <!-- Right Sidebar (Products) -->
+        <aside class="side-panel-right">
+            
+            <!-- Camera Card (Right Sidebar) -->
+            <div class="sensor-card camera-card" id="card-camera" onclick="openCameraModal()" style="width: 100%; height: 240px; flex-shrink: 0; margin-bottom:0;">
+                <div class="card-header">
+                    <h3>Canlı Kamera</h3>
+                    <div class="icon-wrapper camera-icon">
+                        <i class="ph ph-video-camera"></i>
+                    </div>
+                </div>
+                <div class="camera-preview" style="height: 180px; margin-top: auto;">
+                    <video
+                        id="cam-stream"
+                        class="cam-preview-img"
+                        src="Video/akvaryumvideo.mp4"
+                        muted
+                        loop
+                        autoplay
+                        playsinline>
+                    </video>
+                    <div class="camera-overlay">
+                        <i class="ph ph-arrows-out"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="products-panel glass-panel">
+                <div class="side-panel-right-header">
+                    <h3><i class="ph ph-shopping-bag"></i> Önerilen Ürünler</h3>
+                </div>
+                <div class="products-carousel-container">
+                    <div class="products-carousel">
+                    <div class="products-carousel-content">
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-drop"></i></div><div class="product-title">Premium Otomatik Yemleme Makinesi</div><div class="product-price-row"><span class="product-price">450 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-thermometer"></i></div><div class="product-title">Akıllı Isıtıcı 300W</div><div class="product-price-row"><span class="product-price">299 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-test-tube"></i></div><div class="product-title">Elektronik pH Ölçer Kalem</div><div class="product-price-row"><span class="product-price">185 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-wind"></i></div><div class="product-title">CO2 Tüp Sistemi Seti</div><div class="product-price-row"><span class="product-price">1250 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-plant"></i></div><div class="product-title">Sıvı Bitki Gübresi (500ml)</div><div class="product-price-row"><span class="product-price">120 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-lightbulb"></i></div><div class="product-title">Full Spectrum LED Aydınlatma</div><div class="product-price-row"><span class="product-price">850 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-funnel"></i></div><div class="product-title">Dış Filtre (1000 L/H)</div><div class="product-price-row"><span class="product-price">1600 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-flask"></i></div><div class="product-title">Su Düzenleyici Bakteri Kültürü</div><div class="product-price-row"><span class="product-price">145 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-fish-simple"></i></div><div class="product-title">Premium Tetra Balık Yemi</div><div class="product-price-row"><span class="product-price">95 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-scissors"></i></div><div class="product-title">Paslanmaz Çelik Bitki Makası</div><div class="product-price-row"><span class="product-price">210 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                    </div>
+                    <!-- Duplicate for infinite scrolling -->
+                    <div class="products-carousel-content" aria-hidden="true">
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-drop"></i></div><div class="product-title">Premium Otomatik Yemleme Makinesi</div><div class="product-price-row"><span class="product-price">450 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-thermometer"></i></div><div class="product-title">Akıllı Isıtıcı 300W</div><div class="product-price-row"><span class="product-price">299 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-test-tube"></i></div><div class="product-title">Elektronik pH Ölçer Kalem</div><div class="product-price-row"><span class="product-price">185 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-wind"></i></div><div class="product-title">CO2 Tüp Sistemi Seti</div><div class="product-price-row"><span class="product-price">1250 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-plant"></i></div><div class="product-title">Sıvı Bitki Gübresi (500ml)</div><div class="product-price-row"><span class="product-price">120 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-lightbulb"></i></div><div class="product-title">Full Spectrum LED Aydınlatma</div><div class="product-price-row"><span class="product-price">850 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-funnel"></i></div><div class="product-title">Dış Filtre (1000 L/H)</div><div class="product-price-row"><span class="product-price">1600 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-flask"></i></div><div class="product-title">Su Düzenleyici Bakteri Kültürü</div><div class="product-price-row"><span class="product-price">145 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-fish-simple"></i></div><div class="product-title">Premium Tetra Balık Yemi</div><div class="product-price-row"><span class="product-price">95 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                        <a href="#" class="product-card"><div class="product-image"><i class="ph ph-scissors"></i></div><div class="product-title">Paslanmaz Çelik Bitki Makası</div><div class="product-price-row"><span class="product-price">210 ₺</span><button class="add-btn">Satın Al</button></div></a>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="js/app.js?v=1.3"></script>
+</body>
+</html>
