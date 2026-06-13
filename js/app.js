@@ -3899,6 +3899,115 @@ function initDashboardCardMinimize() {
     refreshDashboardMinimizedDock();
 }
 
+function initMobileNavMenu() {
+    const sidebar = document.querySelector('.sidebar');
+    const navMenu = document.querySelector('.nav-menu');
+    const footer = document.querySelector('.main-footer');
+    const sidePanel = document.querySelector('.side-panel-right');
+    const topHeader = document.querySelector('.top-header');
+    const topBanner = document.querySelector('.top-banner');
+    const productsPanel = document.querySelector('.products-panel');
+    if (!sidebar || !navMenu || !footer) return;
+
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+    const originalParent = navMenu.parentElement;
+    const originalNextSibling = navMenu.nextSibling;
+    const originalSidePanelParent = sidePanel?.parentElement || null;
+    const originalSidePanelNextSibling = sidePanel?.nextSibling || null;
+    const originalBannerParent = topBanner?.parentElement || null;
+    const originalBannerNextSibling = topBanner?.nextSibling || null;
+    const originalProductsParent = productsPanel?.parentElement || null;
+    const originalProductsNextSibling = productsPanel?.nextSibling || null;
+
+    const host = document.createElement('div');
+    host.className = 'mobile-nav-host glass-panel';
+    host.innerHTML = `
+        <button class="mobile-nav-toggle" type="button" aria-expanded="false">
+            <span><i class="ph ph-list"></i> Menü</span>
+            <i class="ph ph-caret-down mobile-nav-caret"></i>
+        </button>
+        <div class="mobile-nav-panel"></div>
+    `;
+
+    const toggle = host.querySelector('.mobile-nav-toggle');
+    const panel = host.querySelector('.mobile-nav-panel');
+
+    const setOpen = (open) => {
+        host.classList.toggle('mobile-nav-open', open);
+        toggle?.setAttribute('aria-expanded', String(open));
+    };
+
+    toggle?.addEventListener('click', () => {
+        setOpen(!host.classList.contains('mobile-nav-open'));
+    });
+
+    navMenu.addEventListener('click', (event) => {
+        if (event.target.closest('.nav-item')) {
+            setOpen(false);
+        }
+    });
+
+    const restoreDesktopNav = () => {
+        if (originalParent && navMenu.parentElement !== originalParent) {
+            if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+                originalParent.insertBefore(navMenu, originalNextSibling);
+            } else {
+                originalParent.appendChild(navMenu);
+            }
+        }
+        host.remove();
+        sidebar.classList.remove('mobile-nav-source-hidden');
+        if (sidePanel && originalSidePanelParent && sidePanel.parentElement !== originalSidePanelParent) {
+            if (originalSidePanelNextSibling && originalSidePanelNextSibling.parentNode === originalSidePanelParent) {
+                originalSidePanelParent.insertBefore(sidePanel, originalSidePanelNextSibling);
+            } else {
+                originalSidePanelParent.appendChild(sidePanel);
+            }
+        }
+        if (topBanner && originalBannerParent && topBanner.parentElement !== originalBannerParent) {
+            if (originalBannerNextSibling && originalBannerNextSibling.parentNode === originalBannerParent) {
+                originalBannerParent.insertBefore(topBanner, originalBannerNextSibling);
+            } else {
+                originalBannerParent.appendChild(topBanner);
+            }
+        }
+        if (productsPanel && originalProductsParent && productsPanel.parentElement !== originalProductsParent) {
+            if (originalProductsNextSibling && originalProductsNextSibling.parentNode === originalProductsParent) {
+                originalProductsParent.insertBefore(productsPanel, originalProductsNextSibling);
+            } else {
+                originalProductsParent.appendChild(productsPanel);
+            }
+        }
+        setOpen(false);
+    };
+
+    const applyMobileNav = () => {
+        if (mediaQuery.matches) {
+            if (!host.isConnected) {
+                topHeader?.insertAdjacentElement('afterend', host);
+            }
+            if (sidePanel && sidePanel.previousElementSibling !== host) {
+                host.insertAdjacentElement('afterend', sidePanel);
+            }
+            if (topBanner && topBanner.nextElementSibling !== footer) {
+                footer.parentElement?.insertBefore(topBanner, footer);
+            }
+            if (productsPanel && productsPanel.previousElementSibling !== topBanner) {
+                topBanner?.insertAdjacentElement('afterend', productsPanel);
+            }
+            if (navMenu.parentElement !== panel) {
+                panel.appendChild(navMenu);
+            }
+            sidebar.classList.add('mobile-nav-source-hidden');
+        } else {
+            restoreDesktopNav();
+        }
+    };
+
+    applyMobileNav();
+    mediaQuery.addEventListener('change', applyMobileNav);
+}
+
 // Simulation Initialization
 document.addEventListener('DOMContentLoaded', () => {
     initUsersPage();
@@ -3909,6 +4018,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initDragAndDrop();
     initOverviewItemDragAndDrop();
     initDashboardCardMinimize();
+    initMobileNavMenu();
     initWhatsAppTestButton();
     initTelegramTestButton();
     startCameraPreview();

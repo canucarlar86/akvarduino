@@ -321,6 +321,10 @@ body.auth-locked .app-container {
     object-position: center;
 }
 
+.mobile-nav-host {
+    display: none;
+}
+
 .nav-menu {
     display: flex;
     flex-direction: column;
@@ -933,6 +937,7 @@ body.auth-locked .app-container {
     margin: 0 0 18px;
     padding: 0 2px;
     flex-wrap: wrap;
+    overflow: visible;
 }
 
 .dashboard-minimized-dock-empty,
@@ -2859,6 +2864,416 @@ body.light-theme .setting-input:hover, body.light-theme .setting-input:focus {
 
     .spectrum-row em {
         text-align: left;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        background-attachment: scroll;
+    }
+
+    .app-container {
+        width: 100%;
+        max-width: none;
+        padding: 10px;
+        gap: 12px;
+    }
+
+    .glass-panel,
+    .sensor-card,
+    .product-card {
+        border-radius: 14px;
+    }
+
+    .sidebar {
+        padding: 10px;
+        gap: 10px;
+        border-radius: 16px;
+    }
+
+    .sidebar.mobile-nav-source-hidden {
+        display: none !important;
+    }
+
+    .mobile-nav-host {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        margin: 0 0 12px;
+    }
+
+    .mobile-nav-toggle {
+        width: 100%;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-main);
+        font-family: var(--font-main);
+        font-size: 14px;
+        font-weight: 650;
+        cursor: pointer;
+    }
+
+    .mobile-nav-toggle span {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .mobile-nav-caret {
+        transition: transform 0.2s ease;
+    }
+
+    .mobile-nav-open .mobile-nav-caret {
+        transform: rotate(180deg);
+    }
+
+    .mobile-nav-panel {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.28s ease, margin-top 0.28s ease;
+        margin-top: 0;
+    }
+
+    .mobile-nav-open .mobile-nav-panel {
+        max-height: 420px;
+        margin-top: 10px;
+    }
+
+    .mobile-nav-panel .nav-menu {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: visible;
+    }
+
+    .mobile-nav-panel .nav-item {
+        width: 100%;
+        min-width: 0;
+        padding: 10px 12px;
+        min-height: 42px;
+        border-radius: 10px;
+        font-size: 12px;
+        white-space: normal;
+    }
+
+    .logo {
+        max-width: 160px;
+        height: 72px;
+        aspect-ratio: auto;
+        margin-bottom: 8px;
+        align-self: flex-start;
+    }
+
+    .nav-menu {
+        gap: 8px;
+        margin-bottom: 8px;
+        scrollbar-width: thin;
+    }
+
+    .nav-item {
+        min-width: max-content;
+        padding: 9px 12px;
+        border-radius: 10px;
+        font-size: 12px;
+    }
+
+    .nav-item i {
+        font-size: 17px;
+    }
+
+    .connection-status {
+        width: 100%;
+        padding: 10px 12px;
+        gap: 8px;
+        font-size: 12px;
+    }
+
+    .main-content {
+        width: 100%;
+        gap: 14px;
+        min-width: 0;
+    }
+
+    .top-header {
+        gap: 12px;
+    }
+
+    .top-header h2 {
+        font-size: 22px;
+    }
+
+    .subtitle {
+        font-size: 12px;
+    }
+
+    .header-right-group {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px;
+        gap: 8px;
+        width: 100%;
+        align-items: stretch;
+    }
+
+    .datetime-display,
+    .active-user-display {
+        width: auto;
+        min-width: 0;
+        padding: 8px 10px;
+    }
+
+    .time-display {
+        font-size: 17px;
+    }
+
+    .date-display,
+    .active-user-display span {
+        font-size: 10px;
+    }
+
+    .active-user-display strong {
+        max-width: 100%;
+        font-size: 13px;
+    }
+
+    .theme-toggle-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    .top-banner {
+        align-items: flex-start;
+        padding: 14px;
+        margin-bottom: 12px;
+        gap: 12px;
+    }
+
+    .banner-text h3 {
+        font-size: 14px;
+    }
+
+    .banner-text p {
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    .banner-btn {
+        width: 100%;
+        padding: 9px 12px;
+    }
+
+    .dashboard-grid,
+    .settings-grid,
+    .history-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .dashboard-grid .sensor-card,
+    .sidebar .sensor-card,
+    .sensor-card {
+        min-height: 138px;
+        height: auto;
+        padding: 14px;
+    }
+
+    .dashboard-grid .card-header h3,
+    .sidebar .card-header h3 {
+        max-width: none;
+        font-size: 13px;
+    }
+
+    .dashboard-grid .card-value {
+        font-size: 32px;
+    }
+
+    .sensor-overview-card,
+    .sensor-overview-card-wide,
+    .sensor-overview-card-strip {
+        grid-column: span 1;
+        grid-row: auto;
+        min-height: auto;
+        padding: 14px;
+    }
+
+    .overview-sensor-grid,
+    .overview-sensor-grid-wide,
+    .overview-sensor-grid-strip {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .overview-sensor-item {
+        min-height: 56px;
+        padding: 9px 10px;
+    }
+
+    .dashboard-minimized-dock {
+        gap: 10px;
+        margin-bottom: 12px;
+        overflow: visible;
+        flex-wrap: wrap;
+        padding-bottom: 0;
+    }
+
+    .side-panel-right {
+        gap: 12px;
+        width: 100%;
+        order: 0;
+    }
+
+    .side-panel-right .top-banner {
+        width: 100%;
+        margin: 0;
+    }
+
+    .camera-card {
+        height: auto !important;
+        min-height: 210px;
+    }
+
+    .camera-preview {
+        height: 145px !important;
+    }
+
+    .products-panel {
+        min-height: auto;
+        height: auto;
+        width: 100%;
+        flex: none;
+        overflow: hidden;
+    }
+
+    .side-panel-right-header {
+        padding: 14px;
+    }
+
+    .products-carousel-container {
+        min-height: 250px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 12px;
+    }
+
+    .products-carousel {
+        position: static;
+        flex-direction: row;
+        width: max-content;
+        padding: 0;
+        animation: none;
+        gap: 12px;
+    }
+
+    .products-carousel-content {
+        flex-direction: row;
+        gap: 12px;
+    }
+
+    .product-card {
+        width: 180px;
+        height: 230px;
+        flex: 0 0 180px;
+        padding: 12px;
+    }
+
+    .product-image {
+        min-height: 110px;
+    }
+
+    .settings-page-layout {
+        gap: 14px;
+    }
+
+    .settings-header h2 {
+        font-size: 22px;
+    }
+
+    .settings-inputs,
+    .lighting-schedule-grid,
+    .lighting-plan-summary,
+    .spectrum-row,
+    .permission-grid,
+    .admin-editor-grid,
+    .admin-fields-three,
+    .admin-card-manager-layout,
+    .users-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-modal,
+    .camera-modal,
+    .product-modal {
+        width: min(100%, 96vw);
+        max-height: 92vh;
+    }
+
+    .chart-modal {
+        padding: 16px;
+    }
+
+    .chart-modal-header,
+    .chart-modal-actions {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .chart-modal-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .chart-modal-body {
+        height: 300px;
+    }
+
+    .main-footer {
+        margin-top: 20px;
+    }
+
+    .footer-content {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+}
+
+@media (max-width: 420px) {
+    .app-container {
+        padding: 8px;
+    }
+
+    .header-right-group {
+        grid-template-columns: 1fr 44px;
+    }
+
+    .active-user-display {
+        grid-column: 1 / -1;
+        order: 3;
+    }
+
+    .datetime-display {
+        align-items: flex-start;
+    }
+
+    .dashboard-grid .card-value {
+        font-size: 28px;
+    }
+
+    .product-card {
+        width: 165px;
+        flex-basis: 165px;
+    }
+
+    .chart-modal-stats {
+        grid-template-columns: 1fr;
     }
 }
 
